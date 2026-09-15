@@ -77,38 +77,71 @@ public class PlacementManager : MonoBehaviour
         Conveyor[] conveyors = FindObjectsByType<Conveyor>();
 
         Conveyor closestConveyor = null;
+
+        // true  = preview Snap_Start -> existing Snap_End
+        // false = preview Snap_End   -> existing Snap_Start
+        bool snapStartToEnd = true;
+
         float closestDistance = snapDistance;
 
         foreach (Conveyor conveyor in conveyors)
         {
-            // Don't snap the preview to itself
             if (conveyor.gameObject == preview)
                 continue;
 
-            float distance = Vector3.Distance(
+            // Case 1:
+            // Place preview AFTER existing conveyor.
+            float startToEndDistance = Vector3.Distance(
                 previewConveyor.snapStart.position,
                 conveyor.snapEnd.position
             );
 
-            if (distance < closestDistance)
+            if (startToEndDistance < closestDistance)
             {
-                closestDistance = distance;
+                closestDistance = startToEndDistance;
                 closestConveyor = conveyor;
+                snapStartToEnd = true;
+            }
+
+            // Case 2:
+            // Place preview BEFORE existing conveyor.
+            float endToStartDistance = Vector3.Distance(
+                previewConveyor.snapEnd.position,
+                conveyor.snapStart.position
+            );
+
+            if (endToStartDistance < closestDistance)
+            {
+                closestDistance = endToStartDistance;
+                closestConveyor = conveyor;
+                snapStartToEnd = false;
             }
         }
 
-        if (closestConveyor != null)
-        {
-            // Match the existing conveyor's direction
-            preview.transform.rotation =
-                closestConveyor.transform.rotation;
+        if (closestConveyor == null)
+            return;
 
-            // Recalculate after rotation
-            Vector3 offset =
+        // Match the orientation of the connected conveyor.
+        preview.transform.rotation =
+            closestConveyor.transform.rotation;
+
+        Vector3 offset;
+
+        if (snapStartToEnd)
+        {
+            // Existing -> New
+            offset =
                 closestConveyor.snapEnd.position -
                 previewConveyor.snapStart.position;
-
-            preview.transform.position += offset;
         }
+        else
+        {
+            // New -> Existing
+            offset =
+                closestConveyor.snapStart.position -
+                previewConveyor.snapEnd.position;
+        }
+
+        preview.transform.position += offset;
     }
 }
