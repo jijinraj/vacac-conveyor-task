@@ -16,11 +16,13 @@ public class PlacementManager : MonoBehaviour
         if (Mouse.current == null || Keyboard.current == null)
             return;
 
+        // Press 1 to begin placing a conveyor
         if (Keyboard.current.digit1Key.wasPressedThisFrame)
         {
             BeginPlacement();
         }
 
+        // Press Escape to cancel placement
         if (Keyboard.current.escapeKey.wasPressedThisFrame)
         {
             CancelPlacement();
@@ -35,11 +37,25 @@ public class PlacementManager : MonoBehaviour
 
         if (groundCollider.Raycast(ray, out RaycastHit hit, 1000f))
         {
+            // Move preview to mouse position first
             preview.transform.position = hit.point;
 
-            TrySnapPreview();
+            // Try to connect the preview to an existing conveyor
+            bool isSnapped = TrySnapPreview();
 
-            if (Mouse.current.leftButton.wasPressedThisFrame)
+            // Check whether another conveyor already exists
+            bool hasExistingConveyor = HasExistingConveyor();
+
+            // First conveyor can be placed freely.
+            // Every conveyor after that MUST be snapped.
+            bool canPlace =
+                !hasExistingConveyor ||
+                isSnapped;
+
+            if (
+                Mouse.current.leftButton.wasPressedThisFrame &&
+                canPlace
+            )
             {
                 Instantiate(
                     conveyorPrefab,
@@ -53,7 +69,9 @@ public class PlacementManager : MonoBehaviour
     void BeginPlacement()
     {
         if (preview != null)
+        {
             Destroy(preview);
+        }
 
         preview = Instantiate(conveyorPrefab);
     }
@@ -67,34 +85,66 @@ public class PlacementManager : MonoBehaviour
         }
     }
 
-    void TrySnapPreview()
+    bool HasExistingConveyor()
     {
-        Conveyor previewConveyor = preview.GetComponent<Conveyor>();
+        Conveyor[] conveyors = FindObjectsByType<Conveyor>();
+
+        foreach (Conveyor conveyor in conveyors)
+        {
+            // Ignore the placement preview itself
+            if (conveyor.gameObject == preview)
+                continue;
+
+            return true;
+        }
+
+        return false;
+    }
+
+    bool TrySnapPreview()
+    {
+        Conveyor previewConveyor =
+            preview.GetComponent<Conveyor>();
 
         if (previewConveyor == null)
-            return;
+            return false;
 
-        Conveyor[] conveyors = FindObjectsByType<Conveyor>();
+        Conveyor[] conveyors =
+            FindObjectsByType<Conveyor>();
 
         Conveyor closestConveyor = null;
 
-        // true  = preview Snap_Start -> existing Snap_End
-        // false = preview Snap_End   -> existing Snap_Start
+        // true:
+        // existing Snap_End -> preview Snap_Start
+        //
+        // false:
+        // preview Snap_End -> existing Snap_Start
         bool snapStartToEnd = true;
 
         float closestDistance = snapDistance;
 
         foreach (Conveyor conveyor in conveyors)
         {
+            // Ignore preview itself
             if (conveyor.gameObject == preview)
                 continue;
 
-            // Case 1:
-            // Place preview AFTER existing conveyor.
-            float startToEndDistance = Vector3.Distance(
-                previewConveyor.snapStart.position,
-                conveyor.snapEnd.position
-            );
+            // ----------------------------------------
+            // CASE 1
+            // Add preview AFTER existing conveyor
+            //
+            // [ Existing ][ Preview ]
+            //
+            // Existing Snap_End
+            //        ->
+            // Preview Snap_Start
+            // ----------------------------------------
+
+            float startToEndDistance =
+                Vector3.Distance(
+                    previewConveyor.snapStart.position,
+                    conveyor.snapEnd.position
+                );
 
             if (startToEndDistance < closestDistance)
             {
@@ -103,12 +153,22 @@ public class PlacementManager : MonoBehaviour
                 snapStartToEnd = true;
             }
 
-            // Case 2:
-            // Place preview BEFORE existing conveyor.
-            float endToStartDistance = Vector3.Distance(
-                previewConveyor.snapEnd.position,
-                conveyor.snapStart.position
-            );
+            // ----------------------------------------
+            // CASE 2
+            // Add preview BEFORE existing conveyor
+            //
+            // [ Preview ][ Existing ]
+            //
+            // Preview Snap_End
+            //        ->
+            // Existing Snap_Start
+            // ----------------------------------------
+
+            float endToStartDistance =
+                Vector3.Distance(
+                    previewConveyor.snapEnd.position,
+                    conveyor.snapStart.position
+                );
 
             if (endToStartDistance < closestDistance)
             {
@@ -118,10 +178,12 @@ public class PlacementManager : MonoBehaviour
             }
         }
 
+        // No valid snap point nearby
         if (closestConveyor == null)
-            return;
+            return false;
 
-        // Match the orientation of the connected conveyor.
+        // Force the new conveyor to have exactly
+        // the same orientation as the conveyor line.
         preview.transform.rotation =
             closestConveyor.transform.rotation;
 
@@ -142,6 +204,10 @@ public class PlacementManager : MonoBehaviour
                 previewConveyor.snapEnd.position;
         }
 
+        // Move the preview so the two snap points
+        // perfectly overlap.
         preview.transform.position += offset;
+
+        return true;
     }
 }
