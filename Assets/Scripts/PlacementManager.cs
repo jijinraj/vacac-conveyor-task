@@ -74,8 +74,7 @@ public class PlacementManager : MonoBehaviour
         if (previewConveyor == null)
             return;
 
-        Conveyor[] conveyors =
-            FindObjectsByType<Conveyor>(FindObjectsSortMode.None);
+        Conveyor[] conveyors = FindObjectsByType<Conveyor>();
 
         Conveyor closestConveyor = null;
         float closestDistance = snapDistance;

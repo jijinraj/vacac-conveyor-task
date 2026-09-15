@@ -3,16 +3,29 @@ using UnityEngine;
 public class ProductMover : MonoBehaviour
 {
     public Conveyor currentConveyor;
+
     public float speed = 0.3f;
     public float heightOffset = 0.02f;
     public float connectionTolerance = 0.05f;
 
+    // Called by ProductSpawner when a new product is created
+    public void Initialize(Conveyor conveyor)
+    {
+        currentConveyor = conveyor;
+
+        if (currentConveyor != null)
+        {
+            MoveToStartOfCurrentConveyor();
+        }
+    }
+
     void Start()
     {
-        if (currentConveyor == null)
-            return;
-
-        MoveToStartOfCurrentConveyor();
+        // Keeps manual Inspector testing possible
+        if (currentConveyor != null)
+        {
+            MoveToStartOfCurrentConveyor();
+        }
     }
 
     void Update()
@@ -41,8 +54,7 @@ public class ProductMover : MonoBehaviour
             }
             else
             {
-                // No connected conveyor found.
-                // Product simply stays at the end.
+                // End of conveyor line
                 currentConveyor = null;
             }
         }
@@ -57,10 +69,7 @@ public class ProductMover : MonoBehaviour
 
     Conveyor FindNextConveyor()
     {
-        Conveyor[] conveyors =
-            FindObjectsByType<Conveyor>(
-                FindObjectsSortMode.None
-            );
+        Conveyor[] conveyors = FindObjectsByType<Conveyor>();
 
         foreach (Conveyor conveyor in conveyors)
         {
