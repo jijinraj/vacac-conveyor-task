@@ -56,6 +56,48 @@ public class InspectionGameController : MonoBehaviour
 
 
     // ======================================================
+    // PUBLIC GAME STATE
+    // ======================================================
+
+    public bool IsConveyorStopped
+    {
+        get
+        {
+            return
+                waitingForGoodToGo ||
+                gameOver;
+        }
+    }
+
+
+    public bool IsGameOver
+    {
+        get
+        {
+            return gameOver;
+        }
+    }
+
+
+    public int Score
+    {
+        get
+        {
+            return score;
+        }
+    }
+
+
+    public int Warnings
+    {
+        get
+        {
+            return warnings;
+        }
+    }
+
+
+    // ======================================================
     // UNITY
     // ======================================================
 
@@ -63,7 +105,15 @@ public class InspectionGameController : MonoBehaviour
     {
         if (goodToGoButton != null)
         {
-            goodToGoButton.interactable = false;
+            goodToGoButton.interactable =
+                false;
+        }
+
+
+        if (dangerButton != null)
+        {
+            dangerButton.interactable =
+                true;
         }
 
 
@@ -91,6 +141,9 @@ public class InspectionGameController : MonoBehaviour
         }
 
 
+        // There must be a cargo currently available
+        // inside the scanner decision window.
+
         if (
             scannerZone == null ||
             scannerZone.currentCargo == null
@@ -107,6 +160,8 @@ public class InspectionGameController : MonoBehaviour
         inspectedCargo =
             scannerZone.currentCargo;
 
+
+        // Stop all moving products immediately.
 
         PauseAllProducts();
 
@@ -133,7 +188,9 @@ public class InspectionGameController : MonoBehaviour
         // BOMB
         // ==================================================
 
-        if (inspectedCargo.ContainsBomb())
+        if (
+            inspectedCargo.ContainsBomb()
+        )
         {
             score +=
                 bombPoints;
@@ -148,6 +205,7 @@ public class InspectionGameController : MonoBehaviour
                 inspectedCargo
             );
         }
+
 
         // ==================================================
         // GUN / KNIFE
@@ -170,6 +228,7 @@ public class InspectionGameController : MonoBehaviour
                 inspectedCargo
             );
         }
+
 
         // ==================================================
         // SAFE CARGO — FALSE IDENTIFICATION
@@ -195,7 +254,10 @@ public class InspectionGameController : MonoBehaviour
         }
 
 
-        scannerZone.ClearCurrentCargo();
+        if (scannerZone != null)
+        {
+            scannerZone.ClearCurrentCargo();
+        }
 
 
         UpdateHUD();
@@ -309,7 +371,7 @@ public class InspectionGameController : MonoBehaviour
 
 
     // ======================================================
-    // CONFISCATE
+    // CONFISCATE CARGO
     // ======================================================
 
     void ConfiscateCargo(
@@ -336,6 +398,10 @@ public class InspectionGameController : MonoBehaviour
             true;
 
 
+        waitingForGoodToGo =
+            false;
+
+
         SetResult(
             "EMPLOYMENT TERMINATED\n3 SECURITY WARNINGS"
         );
@@ -355,10 +421,10 @@ public class InspectionGameController : MonoBehaviour
         }
 
 
-        // Keep the conveyor stopped.
+        // The products remain stopped.
         //
-        // Later this will open the proper termination letter
-        // and Game Over screen.
+        // Later this will be replaced with the proper
+        // termination-letter / Game Over screen.
     }
 
 
