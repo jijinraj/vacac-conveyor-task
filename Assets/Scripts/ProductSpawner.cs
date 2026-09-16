@@ -4,12 +4,16 @@ using UnityEngine.InputSystem;
 public class ProductSpawner : MonoBehaviour
 {
     // ======================================================
-    // PRODUCT PREFAB
+    // PRODUCT PREFABS
     // ======================================================
 
-    [Header("Product")]
+    [Header("Product Prefabs")]
 
+    [Tooltip("Cardboard Box prefab. Spawn with key 4.")]
     public GameObject productPrefab;
+
+    [Tooltip("Slim Can prefab. Spawn with key 5.")]
+    public GameObject canPrefab;
 
 
     // ======================================================
@@ -28,7 +32,7 @@ public class ProductSpawner : MonoBehaviour
     // INTERNAL STATE
     // ======================================================
 
-    // The most recently SUCCESSFULLY spawned product.
+    // Most recently successfully spawned product.
     //
     // Pressing R rotates only this product.
     private ProductMover latestSpawnedProduct;
@@ -45,28 +49,32 @@ public class ProductSpawner : MonoBehaviour
 
 
         // --------------------------------------------------
-        // SPAWN PRODUCT
+        // 4 = SPAWN CARDBOARD BOX
         // --------------------------------------------------
-        //
-        // 4 = Spawn cardboard box
 
         if (
             Keyboard.current.digit4Key.wasPressedThisFrame
         )
         {
-            SpawnProduct();
+            SpawnProduct(productPrefab);
         }
 
 
         // --------------------------------------------------
-        // ROTATE LATEST PRODUCT
+        // 5 = SPAWN SLIM CAN
         // --------------------------------------------------
-        //
-        // R = Rotate most recently spawned product by 90°
-        //
-        // ProductMover stores the yaw offset, so the product
-        // keeps this orientation while travelling across
-        // Generic, Short and Incline conveyors.
+
+        if (
+            Keyboard.current.digit5Key.wasPressedThisFrame
+        )
+        {
+            SpawnProduct(canPrefab);
+        }
+
+
+        // --------------------------------------------------
+        // R = ROTATE LATEST PRODUCT 90 DEGREES
+        // --------------------------------------------------
 
         if (
             Keyboard.current.rKey.wasPressedThisFrame &&
@@ -82,8 +90,28 @@ public class ProductSpawner : MonoBehaviour
     // PRODUCT SPAWNING
     // ======================================================
 
-    void SpawnProduct()
+    void SpawnProduct(
+        GameObject prefab
+    )
     {
+        // --------------------------------------------------
+        // VALIDATE PREFAB
+        // --------------------------------------------------
+
+        if (prefab == null)
+        {
+            Debug.LogWarning(
+                "Cannot spawn product: product prefab is not assigned."
+            );
+
+            return;
+        }
+
+
+        // --------------------------------------------------
+        // FIND START OF CONVEYOR LINE
+        // --------------------------------------------------
+
         Conveyor firstConveyor =
             FindFirstConveyor();
 
@@ -103,7 +131,7 @@ public class ProductSpawner : MonoBehaviour
         // --------------------------------------------------
 
         GameObject product =
-            Instantiate(productPrefab);
+            Instantiate(prefab);
 
 
         ProductMover mover =
@@ -126,16 +154,20 @@ public class ProductSpawner : MonoBehaviour
         // INITIALIZE PRODUCT
         // --------------------------------------------------
 
-        // Position the candidate at the actual start
-        // of the conveyor line.
-        mover.Initialize(firstConveyor);
+        mover.Initialize(
+            firstConveyor
+        );
 
 
         // --------------------------------------------------
         // OVERLAP CHECK
         // --------------------------------------------------
 
-        if (OverlapsExistingProduct(product))
+        if (
+            OverlapsExistingProduct(
+                product
+            )
+        )
         {
             Debug.LogWarning(
                 "Cannot spawn product: conveyor start is occupied."
@@ -150,12 +182,9 @@ public class ProductSpawner : MonoBehaviour
         // --------------------------------------------------
         // SUCCESSFUL SPAWN
         // --------------------------------------------------
-        //
-        // Only remember the product AFTER the overlap check.
-        //
-        // This prevents R from trying to rotate a candidate
-        // that was rejected and destroyed.
 
+        // Only remember the product after the overlap
+        // check succeeds.
         latestSpawnedProduct =
             mover;
     }
@@ -180,7 +209,7 @@ public class ProductSpawner : MonoBehaviour
         }
 
 
-        // Add a small safety gap around the product.
+        // Add a small safety gap around the candidate.
         newBounds.Expand(
             productGap * 2f
         );
@@ -195,7 +224,7 @@ public class ProductSpawner : MonoBehaviour
             in products
         )
         {
-            // Ignore the candidate product itself.
+            // Ignore the candidate itself.
             if (
                 product.gameObject ==
                 newProduct
