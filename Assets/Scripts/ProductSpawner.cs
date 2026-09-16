@@ -34,7 +34,7 @@ public class ProductSpawner : MonoBehaviour
 
     // Most recently successfully spawned product.
     //
-    // Pressing R rotates only this product.
+    // R or the Rotate UI button rotates only this product.
     private ProductMover latestSpawnedProduct;
 
 
@@ -56,7 +56,7 @@ public class ProductSpawner : MonoBehaviour
             Keyboard.current.digit4Key.wasPressedThisFrame
         )
         {
-            SpawnProduct(productPrefab);
+            SpawnBox();
         }
 
 
@@ -68,7 +68,7 @@ public class ProductSpawner : MonoBehaviour
             Keyboard.current.digit5Key.wasPressedThisFrame
         )
         {
-            SpawnProduct(canPrefab);
+            SpawnCan();
         }
 
 
@@ -77,12 +77,43 @@ public class ProductSpawner : MonoBehaviour
         // --------------------------------------------------
 
         if (
-            Keyboard.current.rKey.wasPressedThisFrame &&
-            latestSpawnedProduct != null
+            Keyboard.current.rKey.wasPressedThisFrame
         )
         {
-            latestSpawnedProduct.RotateProduct90();
+            RotateLatestProduct();
         }
+    }
+
+
+    // ======================================================
+    // PUBLIC UI ACTIONS
+    // ======================================================
+
+    public void SpawnBox()
+    {
+        SpawnProduct(productPrefab);
+    }
+
+
+    public void SpawnCan()
+    {
+        SpawnProduct(canPrefab);
+    }
+
+
+    public void RotateLatestProduct()
+    {
+        if (latestSpawnedProduct == null)
+        {
+            Debug.LogWarning(
+                "Cannot rotate product: no successfully spawned product is available."
+            );
+
+            return;
+        }
+
+
+        latestSpawnedProduct.RotateProduct90();
     }
 
 
