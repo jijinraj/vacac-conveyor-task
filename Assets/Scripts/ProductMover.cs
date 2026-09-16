@@ -82,7 +82,8 @@ public class ProductMover : MonoBehaviour
     private Quaternion transitionStartRotation;
     private Quaternion transitionEndRotation;
 
-    // Additional rotation chosen by the player.
+
+    // Additional rotation selected by the player.
     //
     // 0   = normal
     // 90  = sideways
@@ -209,6 +210,7 @@ public class ProductMover : MonoBehaviour
     {
         productYawOffset += degrees;
 
+
         productYawOffset =
             Mathf.Repeat(
                 productYawOffset,
@@ -216,8 +218,8 @@ public class ProductMover : MonoBehaviour
             );
 
 
-        // If the product is currently travelling between
-        // conveyors, update the cached target orientation too.
+        // If R is pressed during a conveyor transition,
+        // update the target orientation immediately.
         if (
             isTransitioning &&
             transitionTargetConveyor != null
@@ -263,18 +265,6 @@ public class ProductMover : MonoBehaviour
         // --------------------------------------------------
         // CONNECTION-SEAM CLEARANCE
         // --------------------------------------------------
-        //
-        // Flat -> Flat:
-        //      flat clearance
-        //
-        // Flat -> Incline:
-        //      flat clearance at bottom seam
-        //
-        // Incline -> Flat:
-        //      flat clearance at upper seam
-        //
-        // Incline -> Incline:
-        //      incline clearance
 
         float seamClearance =
             GetTransitionSeamClearance(
@@ -320,15 +310,16 @@ public class ProductMover : MonoBehaviour
             ConveyorType.Incline;
 
 
-        // Incline -> Incline
+        // Only Incline -> Incline uses
+        // the incline-specific clearance.
         if (fromIncline && toIncline)
         {
             return inclineSurfaceClearance;
         }
 
 
-        // Every seam involving Generic or Short uses
-        // the normal flat clearance.
+        // Any seam involving Generic or Short
+        // uses flat clearance.
         return flatSurfaceClearance;
     }
 
@@ -360,6 +351,7 @@ public class ProductMover : MonoBehaviour
             );
 
 
+        // SmoothStep.
         float smoothT =
             t * t *
             (
@@ -376,8 +368,8 @@ public class ProductMover : MonoBehaviour
             );
 
 
-        // Recalculate this so product rotation changes
-        // remain valid even during a transition.
+        // Recalculate because the product may be rotated
+        // while travelling between conveyors.
         transitionEndRotation =
             GetTargetConveyorRotation(
                 transitionTargetConveyor
@@ -480,31 +472,43 @@ public class ProductMover : MonoBehaviour
         }
 
 
-        float finalYaw =
-            conveyor.transform.eulerAngles.y +
-            productYawOffset;
-
-
-        // --------------------------------------------------
-        // GENERIC / SHORT
-        // --------------------------------------------------
+        // ==================================================
+        // FLAT CONVEYORS
+        // ==================================================
 
         if (
             conveyor.conveyorType !=
             ConveyorType.Incline
         )
         {
-            return Quaternion.Euler(
-                0f,
-                finalYaw,
-                0f
-            );
+            // First orient the product with the conveyor.
+            Quaternion flatConveyorRotation =
+                Quaternion.Euler(
+                    0f,
+                    conveyor.transform.eulerAngles.y,
+                    0f
+                );
+
+
+            // Then apply the player's 0/90/180/270
+            // rotation relative to that conveyor.
+            Quaternion flatProductYawRotation =
+                Quaternion.Euler(
+                    0f,
+                    productYawOffset,
+                    0f
+                );
+
+
+            return
+                flatConveyorRotation *
+                flatProductYawRotation;
         }
 
 
-        // --------------------------------------------------
+        // ==================================================
         // INCLINE
-        // --------------------------------------------------
+        // ==================================================
 
         if (
             conveyor.pathStart == null ||
@@ -530,11 +534,47 @@ public class ProductMover : MonoBehaviour
                 : inclineTiltDegrees;
 
 
-        return Quaternion.Euler(
-            pitch,
-            finalYaw,
-            0f
-        );
+        // --------------------------------------------------
+        // STEP 1:
+        // ALIGN TO THE INCLINE SURFACE
+        // --------------------------------------------------
+
+        Quaternion inclineSurfaceRotation =
+            Quaternion.Euler(
+                pitch,
+                conveyor.transform.eulerAngles.y,
+                0f
+            );
+
+
+        // --------------------------------------------------
+        // STEP 2:
+        // ROTATE THE PRODUCT ON THAT SURFACE
+        // --------------------------------------------------
+        //
+        // This rotation is applied AFTER the incline surface
+        // orientation.
+        //
+        // Therefore the box can be:
+        //
+        // 0°
+        // 90°
+        // 180°
+        // 270°
+        //
+        // while still following the incline surface.
+
+        Quaternion inclineProductYawRotation =
+            Quaternion.Euler(
+                0f,
+                productYawOffset,
+                0f
+            );
+
+
+        return
+            inclineSurfaceRotation *
+            inclineProductYawRotation;
     }
 
 
@@ -610,6 +650,7 @@ public class ProductMover : MonoBehaviour
         }
 
 
+        // Root pivot -> bottom of visible mesh.
         pivotToBottomOffset =
             transform.position.y -
             combinedBounds.min.y;
