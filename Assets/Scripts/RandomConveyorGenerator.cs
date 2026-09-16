@@ -38,6 +38,14 @@ public class RandomConveyorGenerator : MonoBehaviour
     )]
     public int maximumConsecutiveInclines = 2;
 
+    [Header("Game Start")]
+
+    [Tooltip(
+        "Automatically generate a conveyor structure when this scene starts. " +
+        "Enable this in GameScene and leave it disabled in SandboxScene."
+    )]
+    public bool generateOnStart = false;
+
 
     // ======================================================
     // RANDOM WEIGHTS
@@ -104,8 +112,28 @@ public class RandomConveyorGenerator : MonoBehaviour
 
 
     // ======================================================
+    // PUBLIC GENERATED STRUCTURE STATE
+    // ======================================================
+
+    public Conveyor FirstGeneratedConveyor
+    {
+        get;
+        private set;
+    }
+
+
+    // ======================================================
     // UNITY LIFECYCLE
     // ======================================================
+
+    void Start()
+    {
+        if (generateOnStart)
+        {
+            GenerateRandomStructure();
+        }
+    }
+
 
     void Update()
     {
@@ -148,10 +176,12 @@ public class RandomConveyorGenerator : MonoBehaviour
         // auto-generated structure.
         //
         // Manually placed conveyors are not touched.
+
         ClearGeneratedStructure();
 
 
         CreateGeneratedRoot();
+        FirstGeneratedConveyor = null;
 
 
         int segmentCount =
@@ -286,6 +316,15 @@ public class RandomConveyorGenerator : MonoBehaviour
             );
 
 
+            // Remember the first conveyor in the generated line.
+
+            if (FirstGeneratedConveyor == null)
+            {
+                FirstGeneratedConveyor =
+                    newConveyor;
+            }
+
+
             previousConveyor =
                 newConveyor;
 
@@ -340,6 +379,7 @@ public class RandomConveyorGenerator : MonoBehaviour
 
         // Reset the first conveyor to a known baseline
         // before generation begins.
+
         conveyor.SetStartLocalZ(
             GetCanonicalStartZ(type)
         );
@@ -647,6 +687,8 @@ public class RandomConveyorGenerator : MonoBehaviour
 
 
         generatedConveyors.Clear();
+
+        FirstGeneratedConveyor = null;
 
 
         if (generatedRoot != null)

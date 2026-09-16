@@ -5701,6 +5701,7 @@ MonoBehaviour:
   maximumSegments: 12
   firstSegmentMustBeFlat: 1
   maximumConsecutiveInclines: 2
+  generateOnStart: 1
   genericWeight: 0.45
   shortWeight: 0.3
   inclineWeight: 0.25

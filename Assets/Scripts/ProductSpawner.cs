@@ -32,15 +32,21 @@ public class ProductSpawner : MonoBehaviour
     // INTERNAL STATE
     // ======================================================
 
-    // Most recently successfully spawned product.
-    //
-    // R or the Rotate UI button rotates only this product.
     private ProductMover latestSpawnedProduct;
+
+    private RandomConveyorGenerator randomConveyorGenerator;
 
 
     // ======================================================
     // UNITY LIFECYCLE
     // ======================================================
+
+    void Awake()
+    {
+        randomConveyorGenerator =
+            FindFirstObjectByType<RandomConveyorGenerator>();
+    }
+
 
     void Update()
     {
@@ -52,9 +58,7 @@ public class ProductSpawner : MonoBehaviour
         // 4 = SPAWN CARDBOARD BOX
         // --------------------------------------------------
 
-        if (
-            Keyboard.current.digit4Key.wasPressedThisFrame
-        )
+        if (Keyboard.current.digit4Key.wasPressedThisFrame)
         {
             SpawnBox();
         }
@@ -64,9 +68,7 @@ public class ProductSpawner : MonoBehaviour
         // 5 = SPAWN SLIM CAN
         // --------------------------------------------------
 
-        if (
-            Keyboard.current.digit5Key.wasPressedThisFrame
-        )
+        if (Keyboard.current.digit5Key.wasPressedThisFrame)
         {
             SpawnCan();
         }
@@ -76,9 +78,7 @@ public class ProductSpawner : MonoBehaviour
         // R = ROTATE LATEST PRODUCT 90 DEGREES
         // --------------------------------------------------
 
-        if (
-            Keyboard.current.rKey.wasPressedThisFrame
-        )
+        if (Keyboard.current.rKey.wasPressedThisFrame)
         {
             RotateLatestProduct();
         }
@@ -121,9 +121,7 @@ public class ProductSpawner : MonoBehaviour
     // PRODUCT SPAWNING
     // ======================================================
 
-    void SpawnProduct(
-        GameObject prefab
-    )
+    void SpawnProduct(GameObject prefab)
     {
         // --------------------------------------------------
         // VALIDATE PREFAB
@@ -214,8 +212,6 @@ public class ProductSpawner : MonoBehaviour
         // SUCCESSFUL SPAWN
         // --------------------------------------------------
 
-        // Only remember the product after the overlap
-        // check succeeds.
         latestSpawnedProduct =
             mover;
     }
@@ -240,14 +236,15 @@ public class ProductSpawner : MonoBehaviour
         }
 
 
-        // Add a small safety gap around the candidate.
         newBounds.Expand(
             productGap * 2f
         );
 
 
         ProductMover[] products =
-            FindObjectsByType<ProductMover>();
+            FindObjectsByType<ProductMover>(
+                FindObjectsSortMode.None
+            );
 
 
         foreach (
@@ -255,7 +252,6 @@ public class ProductSpawner : MonoBehaviour
             in products
         )
         {
-            // Ignore the candidate itself.
             if (
                 product.gameObject ==
                 newProduct
@@ -337,8 +333,38 @@ public class ProductSpawner : MonoBehaviour
 
     Conveyor FindFirstConveyor()
     {
+        // --------------------------------------------------
+        // PREFER AUTO-GENERATED GAME CONVEYOR
+        // --------------------------------------------------
+
+        if (randomConveyorGenerator == null)
+        {
+            randomConveyorGenerator =
+                FindFirstObjectByType<RandomConveyorGenerator>();
+        }
+
+
+        if (
+            randomConveyorGenerator != null &&
+            randomConveyorGenerator.FirstGeneratedConveyor != null
+        )
+        {
+            return
+                randomConveyorGenerator.FirstGeneratedConveyor;
+        }
+
+
+        // --------------------------------------------------
+        // FALLBACK:
+        // FIND START OF ANY CONNECTED CONVEYOR LINE
+        //
+        // This keeps SandboxScene working normally.
+        // --------------------------------------------------
+
         Conveyor[] conveyors =
-            FindObjectsByType<Conveyor>();
+            FindObjectsByType<Conveyor>(
+                FindObjectsSortMode.None
+            );
 
 
         foreach (
@@ -346,6 +372,15 @@ public class ProductSpawner : MonoBehaviour
             in conveyors
         )
         {
+            if (
+                candidate == null ||
+                candidate.snapStart == null
+            )
+            {
+                continue;
+            }
+
+
             bool hasPreviousConveyor =
                 false;
 
@@ -356,8 +391,9 @@ public class ProductSpawner : MonoBehaviour
             )
             {
                 if (
-                    candidate ==
-                    other
+                    candidate == other ||
+                    other == null ||
+                    other.snapEnd == null
                 )
                 {
                     continue;
