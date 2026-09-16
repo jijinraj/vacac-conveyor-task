@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 7470505425676809037}
   - component: {fileID: 6739825277166371496}
   - component: {fileID: 8383883002354466432}
+  - component: {fileID: 9042373781019182523}
   m_Layer: 0
   m_Name: Product_Can
   m_TagString: Untagged
@@ -68,6 +69,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CargoContents
   items: 
+  generateOnAwake: 1
+  minimumItems: 1
+  maximumItems: 5
+  prohibitedChance: 0.2
+  bombChance: 0.05
+--- !u!114 &9042373781019182523
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5248776598740220169}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ace0e9f5ee3021648ae0df9690286d1e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CargoExitHandler
 --- !u!1001 &2429716072060453999
 PrefabInstance:
   m_ObjectHideFlags: 0

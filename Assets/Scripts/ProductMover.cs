@@ -190,7 +190,15 @@ public class ProductMover : MonoBehaviour
             }
             else
             {
-                Destroy(gameObject);
+                CargoExitHandler exitHandler =
+    GetComponent<CargoExitHandler>();
+
+if (exitHandler != null)
+{
+    exitHandler.ReportReachedConveyorEnd();
+}
+
+Destroy(gameObject);
             }
         }
     }

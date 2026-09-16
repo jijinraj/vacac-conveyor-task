@@ -63,9 +63,7 @@ public class InspectionGameController : MonoBehaviour
     {
         get
         {
-            return
-                waitingForGoodToGo ||
-                gameOver;
+            return waitingForGoodToGo || gameOver;
         }
     }
 
@@ -105,15 +103,13 @@ public class InspectionGameController : MonoBehaviour
     {
         if (goodToGoButton != null)
         {
-            goodToGoButton.interactable =
-                false;
+            goodToGoButton.interactable = false;
         }
 
 
         if (dangerButton != null)
         {
-            dangerButton.interactable =
-                true;
+            dangerButton.interactable = true;
         }
 
 
@@ -141,9 +137,6 @@ public class InspectionGameController : MonoBehaviour
         }
 
 
-        // There must be a cargo currently available
-        // inside the scanner decision window.
-
         if (
             scannerZone == null ||
             scannerZone.currentCargo == null
@@ -160,8 +153,6 @@ public class InspectionGameController : MonoBehaviour
         inspectedCargo =
             scannerZone.currentCargo;
 
-
-        // Stop all moving products immediately.
 
         PauseAllProducts();
 
@@ -236,21 +227,9 @@ public class InspectionGameController : MonoBehaviour
 
         else
         {
-            warnings++;
-
-
-            SetResult(
-                $"FALSE IDENTIFICATION\nWARNING {warnings} / {maximumWarnings}"
+            AddWarning(
+                "FALSE IDENTIFICATION"
             );
-
-
-            if (
-                warnings >=
-                maximumWarnings
-            )
-            {
-                TriggerTermination();
-            }
         }
 
 
@@ -265,7 +244,7 @@ public class InspectionGameController : MonoBehaviour
 
 
     // ======================================================
-    // GOOD TO GO BUTTON
+    // GOOD TO GO
     // ======================================================
 
     public void PressGoodToGo()
@@ -307,6 +286,103 @@ public class InspectionGameController : MonoBehaviour
         SetResult(
             "SCANNING..."
         );
+    }
+
+
+    // ======================================================
+    // CARGO REACHED END
+    // ======================================================
+
+    public void HandleCargoReachedEnd(
+        CargoContents cargo
+    )
+    {
+        if (
+            cargo == null ||
+            gameOver
+        )
+        {
+            return;
+        }
+
+
+        Debug.Log(
+            $"Cargo reached conveyor end [{cargo.gameObject.name}] | " +
+            $"Risk: {cargo.GetRiskLevel()} | " +
+            $"Contents: {string.Join(", ", cargo.items)}"
+        );
+
+
+        // ==================================================
+        // MISSED BOMB
+        // ==================================================
+
+        if (
+            cargo.ContainsBomb()
+        )
+        {
+            TriggerExplosion();
+
+            return;
+        }
+
+
+        // ==================================================
+        // MISSED GUN / KNIFE
+        // ==================================================
+
+        if (
+            cargo.ContainsProhibitedItem()
+        )
+        {
+            AddWarning(
+                "MISSED SECURITY THREAT"
+            );
+
+            return;
+        }
+
+
+        // ==================================================
+        // SAFE CARGO
+        // ==================================================
+
+        Debug.Log(
+            "Safe cargo cleared successfully."
+        );
+    }
+
+
+    // ======================================================
+    // WARNINGS
+    // ======================================================
+
+    void AddWarning(
+        string reason
+    )
+    {
+        if (gameOver)
+            return;
+
+
+        warnings++;
+
+
+        SetResult(
+            $"{reason}\nWARNING {warnings} / {maximumWarnings}"
+        );
+
+
+        UpdateHUD();
+
+
+        if (
+            warnings >=
+            maximumWarnings
+        )
+        {
+            TriggerTermination();
+        }
     }
 
 
@@ -389,21 +465,27 @@ public class InspectionGameController : MonoBehaviour
 
 
     // ======================================================
-    // TERMINATION
+    // MISSED BOMB
     // ======================================================
 
-    void TriggerTermination()
+    void TriggerExplosion()
     {
+        if (gameOver)
+            return;
+
+
         gameOver =
             true;
-
 
         waitingForGoodToGo =
             false;
 
 
+        PauseAllProducts();
+
+
         SetResult(
-            "EMPLOYMENT TERMINATED\n3 SECURITY WARNINGS"
+            "EXPLOSION\nBOMB MISSED — GAME OVER"
         );
 
 
@@ -421,10 +503,68 @@ public class InspectionGameController : MonoBehaviour
         }
 
 
-        // The products remain stopped.
-        //
-        // Later this will be replaced with the proper
-        // termination-letter / Game Over screen.
+        Debug.LogWarning(
+            "GAME OVER: Bomb reached the end of the conveyor."
+        );
+
+
+        // Later:
+        // explosion VFX
+        // explosion SFX
+        // screen shake
+        // dedicated Game Over panel
+    }
+
+
+    // ======================================================
+    // TERMINATION
+    // ======================================================
+
+    void TriggerTermination()
+    {
+        if (gameOver)
+            return;
+
+
+        gameOver =
+            true;
+
+        waitingForGoodToGo =
+            false;
+
+
+        PauseAllProducts();
+
+
+        SetResult(
+            $"EMPLOYMENT TERMINATED\n{maximumWarnings} SECURITY WARNINGS"
+        );
+
+
+        if (dangerButton != null)
+        {
+            dangerButton.interactable =
+                false;
+        }
+
+
+        if (goodToGoButton != null)
+        {
+            goodToGoButton.interactable =
+                false;
+        }
+
+
+        Debug.LogWarning(
+            "GAME OVER: Maximum security warnings reached."
+        );
+
+
+        // Later:
+        // termination letter
+        // final score
+        // restart button
+        // main menu button
     }
 
 

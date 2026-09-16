@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 8530153706894415168}
   - component: {fileID: 9089215097497694350}
   - component: {fileID: 1520036151742675494}
+  - component: {fileID: 2347217549839828142}
   m_Layer: 0
   m_Name: Product_Box
   m_TagString: Untagged
@@ -74,7 +75,7 @@ MonoBehaviour:
   minimumItems: 1
   maximumItems: 5
   prohibitedChance: 0.2
-  bombChance: 0.05
+  bombChance: 0.42
 --- !u!65 &9089215097497694350
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -123,6 +124,18 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!114 &2347217549839828142
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4729590330243960277}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ace0e9f5ee3021648ae0df9690286d1e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CargoExitHandler
 --- !u!1001 &547607970048619378
 PrefabInstance:
   m_ObjectHideFlags: 0
