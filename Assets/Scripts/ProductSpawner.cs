@@ -16,7 +16,7 @@ public class ProductSpawner : MonoBehaviour
             return;
 
         // Press 2 to spawn a cardboard box.
-        if (Keyboard.current.digit2Key.wasPressedThisFrame)
+        if (Keyboard.current.digit3Key.wasPressedThisFrame)
         {
             SpawnProduct();
         }

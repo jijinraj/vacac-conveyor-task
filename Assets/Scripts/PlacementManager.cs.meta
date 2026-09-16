@@ -1,2 +1,15 @@
 fileFormatVersion: 2
 guid: ba04d06b22b04ee49a15bc1495ed0515
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - mainCamera: {instanceID: 0}
+  - genericConveyorPrefab: {fileID: 3744988763874445308, guid: de191ac889dd7dd4d8b62e826753dbba, type: 3}
+  - shortConveyorPrefab: {fileID: 3744988763874445308, guid: 2d8bf0854e6db6b41951697a8653516b, type: 3}
+  - groundCollider: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

@@ -527,6 +527,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ProductSpawner
   productPrefab: {fileID: 4729590330243960277, guid: b3ef371124133834a83090d3e07e2866, type: 3}
   connectionTolerance: 0.05
+  productGap: 0.05
 --- !u!4 &807220539
 Transform:
   m_ObjectHideFlags: 0
@@ -621,9 +622,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlacementManager
   mainCamera: {fileID: 330585545}
-  conveyorPrefab: {fileID: 3744988763874445308, guid: de191ac889dd7dd4d8b62e826753dbba, type: 3}
+  genericConveyorPrefab: {fileID: 3744988763874445308, guid: de191ac889dd7dd4d8b62e826753dbba, type: 3}
+  shortConveyorPrefab: {fileID: 3744988763874445308, guid: 2d8bf0854e6db6b41951697a8653516b, type: 3}
   groundCollider: {fileID: 594526868}
   snapDistance: 0.3
+  connectionTolerance: 0.05
 --- !u!4 &1433143179
 Transform:
   m_ObjectHideFlags: 0

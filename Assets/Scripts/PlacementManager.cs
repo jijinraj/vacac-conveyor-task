@@ -4,7 +4,10 @@ using UnityEngine.InputSystem;
 public class PlacementManager : MonoBehaviour
 {
     public Camera mainCamera;
-    public GameObject conveyorPrefab;
+
+    public GameObject genericConveyorPrefab;
+    public GameObject shortConveyorPrefab;
+
     public Collider groundCollider;
 
     public float snapDistance = 0.3f;
@@ -14,19 +17,26 @@ public class PlacementManager : MonoBehaviour
     public float connectionTolerance = 0.05f;
 
     private GameObject preview;
+    private GameObject selectedConveyorPrefab;
 
     void Update()
     {
         if (Mouse.current == null || Keyboard.current == null)
             return;
 
-        // Press 1 to begin placing a conveyor
+        // 1 = Generic Conveyor
         if (Keyboard.current.digit1Key.wasPressedThisFrame)
         {
-            BeginPlacement();
+            BeginPlacement(genericConveyorPrefab);
         }
 
-        // Press Escape to cancel placement
+        // 2 = Short Conveyor
+        if (Keyboard.current.digit2Key.wasPressedThisFrame)
+        {
+            BeginPlacement(shortConveyorPrefab);
+        }
+
+        // Escape = cancel current placement
         if (Keyboard.current.escapeKey.wasPressedThisFrame)
         {
             CancelPlacement();
@@ -41,17 +51,17 @@ public class PlacementManager : MonoBehaviour
 
         if (groundCollider.Raycast(ray, out RaycastHit hit, 1000f))
         {
-            // Move preview to current mouse position.
+            // Move preview to the mouse position.
             preview.transform.position = hit.point;
 
-            // Attempt to snap to an AVAILABLE conveyor endpoint.
+            // Try to snap to an available endpoint.
             bool isSnapped = TrySnapPreview();
 
-            // Check whether a real conveyor already exists.
+            // Determine whether a real conveyor already exists.
             bool hasExistingConveyor = HasExistingConveyor();
 
-            // The first conveyor may be placed freely.
-            // Every later conveyor must successfully snap.
+            // First conveyor may be placed freely.
+            // All later conveyors must be snapped.
             bool canPlace =
                 !hasExistingConveyor ||
                 isSnapped;
@@ -61,23 +71,43 @@ public class PlacementManager : MonoBehaviour
                 canPlace
             )
             {
-                Instantiate(
-                    conveyorPrefab,
-                    preview.transform.position,
-                    preview.transform.rotation
-                );
+                PlaceConveyor();
             }
         }
     }
 
-    void BeginPlacement()
+    void BeginPlacement(GameObject prefab)
     {
+        if (prefab == null)
+        {
+            Debug.LogWarning(
+                "Cannot begin conveyor placement: prefab is not assigned."
+            );
+
+            return;
+        }
+
+        // Remove previous preview if one already exists.
         if (preview != null)
         {
             Destroy(preview);
         }
 
-        preview = Instantiate(conveyorPrefab);
+        selectedConveyorPrefab = prefab;
+
+        preview = Instantiate(selectedConveyorPrefab);
+    }
+
+    void PlaceConveyor()
+    {
+        if (selectedConveyorPrefab == null || preview == null)
+            return;
+
+        Instantiate(
+            selectedConveyorPrefab,
+            preview.transform.position,
+            preview.transform.rotation
+        );
     }
 
     void CancelPlacement()
@@ -87,15 +117,18 @@ public class PlacementManager : MonoBehaviour
             Destroy(preview);
             preview = null;
         }
+
+        selectedConveyorPrefab = null;
     }
 
     bool HasExistingConveyor()
     {
-        Conveyor[] conveyors = FindObjectsByType<Conveyor>();
+        Conveyor[] conveyors =
+            FindObjectsByType<Conveyor>();
 
         foreach (Conveyor conveyor in conveyors)
         {
-            // Ignore the placement preview itself.
+            // Ignore the active preview.
             if (conveyor.gameObject == preview)
                 continue;
 
@@ -119,32 +152,33 @@ public class PlacementManager : MonoBehaviour
         Conveyor closestConveyor = null;
 
         // true:
-        // existing Snap_End -> preview Snap_Start
+        // Existing Snap_End -> Preview Snap_Start
         //
         // false:
-        // preview Snap_End -> existing Snap_Start
+        // Preview Snap_End -> Existing Snap_Start
         bool snapStartToEnd = true;
 
         float closestDistance = snapDistance;
 
         foreach (Conveyor conveyor in conveyors)
         {
-            // Ignore the preview itself.
+            // Ignore the active preview.
             if (conveyor.gameObject == preview)
                 continue;
 
-            // ------------------------------------------------
+            // ==================================================
             // CASE 1
             //
             // Add preview AFTER existing conveyor:
             //
             // [ Existing ][ Preview ]
             //
-            // Existing Snap_End -> Preview Snap_Start
+            // Existing Snap_End
+            //        ->
+            // Preview Snap_Start
             //
-            // Only valid if Existing Snap_End is NOT
-            // already connected to another conveyor.
-            // ------------------------------------------------
+            // Existing Snap_End must be free.
+            // ==================================================
 
             if (!IsEndOccupied(conveyor, conveyors))
             {
@@ -162,18 +196,19 @@ public class PlacementManager : MonoBehaviour
                 }
             }
 
-            // ------------------------------------------------
+            // ==================================================
             // CASE 2
             //
             // Add preview BEFORE existing conveyor:
             //
             // [ Preview ][ Existing ]
             //
-            // Preview Snap_End -> Existing Snap_Start
+            // Preview Snap_End
+            //        ->
+            // Existing Snap_Start
             //
-            // Only valid if Existing Snap_Start is NOT
-            // already connected to another conveyor.
-            // ------------------------------------------------
+            // Existing Snap_Start must be free.
+            // ==================================================
 
             if (!IsStartOccupied(conveyor, conveyors))
             {
@@ -192,11 +227,11 @@ public class PlacementManager : MonoBehaviour
             }
         }
 
-        // No free/valid endpoint nearby.
+        // No valid free endpoint is nearby.
         if (closestConveyor == null)
             return false;
 
-        // Keep the conveyor line straight.
+        // Keep the current conveyor line straight.
         preview.transform.rotation =
             closestConveyor.transform.rotation;
 
@@ -217,7 +252,7 @@ public class PlacementManager : MonoBehaviour
                 previewConveyor.snapEnd.position;
         }
 
-        // Make the relevant snap points overlap exactly.
+        // Make the selected connection points overlap exactly.
         preview.transform.position += offset;
 
         return true;
@@ -233,7 +268,7 @@ public class PlacementManager : MonoBehaviour
             if (other == conveyor)
                 continue;
 
-            // Preview must not count as a real connection.
+            // Preview must not count as a real conveyor connection.
             if (other.gameObject == preview)
                 continue;
 
@@ -261,7 +296,7 @@ public class PlacementManager : MonoBehaviour
             if (other == conveyor)
                 continue;
 
-            // Preview must not count as a real connection.
+            // Preview must not count as a real conveyor connection.
             if (other.gameObject == preview)
                 continue;
 
