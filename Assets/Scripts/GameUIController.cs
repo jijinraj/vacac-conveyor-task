@@ -12,6 +12,23 @@ public class GameUIController : MonoBehaviour
     public GameObject toolbarPanel;
     public GameObject pausePanel;
 
+    [Header("Gameplay UI")]
+    public GameObject inspectionHUD;
+    public GameObject musicPanel;
+
+
+    // ======================================================
+    // SCENE SETTINGS
+    // ======================================================
+
+    [Header("Scene Settings")]
+
+    [Tooltip(
+        "Enable this in SandboxScene. " +
+        "Disable it in GameScene."
+    )]
+    public bool showToolbarDuringGameplay = true;
+
 
     // ======================================================
     // RUNTIME
@@ -84,6 +101,10 @@ public class GameUIController : MonoBehaviour
                 : 1f;
 
 
+        // --------------------------------------------------
+        // PAUSE MENU
+        // --------------------------------------------------
+
         if (pausePanel != null)
         {
             pausePanel.SetActive(
@@ -92,13 +113,41 @@ public class GameUIController : MonoBehaviour
         }
 
 
-        // In SandboxScene this can still show/hide the toolbar.
-        // In GameScene the ToolbarPanel itself should already
-        // be disabled because the actual game does not need it.
+        // --------------------------------------------------
+        // SANDBOX TOOLBAR
+        // --------------------------------------------------
 
         if (toolbarPanel != null)
         {
             toolbarPanel.SetActive(
+                !paused &&
+                showToolbarDuringGameplay
+            );
+        }
+
+
+        // --------------------------------------------------
+        // GAMEPLAY HUD
+        // --------------------------------------------------
+
+        if (inspectionHUD != null)
+        {
+            inspectionHUD.SetActive(
+                !paused
+            );
+        }
+
+
+        // --------------------------------------------------
+        // MUSIC CONTROLS
+        //
+        // Audio itself keeps playing.
+        // Only the controls are hidden while paused.
+        // --------------------------------------------------
+
+        if (musicPanel != null)
+        {
+            musicPanel.SetActive(
                 !paused
             );
         }

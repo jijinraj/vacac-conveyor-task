@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -19,7 +20,6 @@ public class InspectionGameController : MonoBehaviour
     public TMP_Text resultText;
 
     public Button dangerButton;
-    public Button goodToGoButton;
 
 
     // ======================================================
@@ -40,19 +40,33 @@ public class InspectionGameController : MonoBehaviour
 
 
     // ======================================================
+    // AUTOMATIC RESUME
+    // ======================================================
+
+    [Header("Automatic Resume")]
+
+    [Tooltip(
+        "How long the conveyor stays stopped after pressing DANGER."
+    )]
+    public float automaticResumeDelay = 0.5f;
+
+
+    // ======================================================
     // RUNTIME
     // ======================================================
 
     private int score = 0;
     private int warnings = 0;
 
-    private bool waitingForGoodToGo = false;
+    private bool decisionPauseActive = false;
     private bool gameOver = false;
 
     private CargoContents inspectedCargo;
 
     private readonly List<ProductMover> pausedProducts =
         new List<ProductMover>();
+
+    private Coroutine automaticResumeCoroutine;
 
 
     // ======================================================
@@ -63,7 +77,7 @@ public class InspectionGameController : MonoBehaviour
     {
         get
         {
-            return waitingForGoodToGo || gameOver;
+            return decisionPauseActive || gameOver;
         }
     }
 
@@ -101,12 +115,6 @@ public class InspectionGameController : MonoBehaviour
 
     void Start()
     {
-        if (goodToGoButton != null)
-        {
-            goodToGoButton.interactable = false;
-        }
-
-
         if (dangerButton != null)
         {
             dangerButton.interactable = true;
@@ -130,12 +138,15 @@ public class InspectionGameController : MonoBehaviour
     {
         if (
             gameOver ||
-            waitingForGoodToGo
+            decisionPauseActive
         )
         {
             return;
         }
 
+
+        // There must be cargo currently inside
+        // the scanner decision window.
 
         if (
             scannerZone == null ||
@@ -154,10 +165,13 @@ public class InspectionGameController : MonoBehaviour
             scannerZone.currentCargo;
 
 
+        // --------------------------------------------------
+        // STOP CONVEYOR
+        // --------------------------------------------------
+
         PauseAllProducts();
 
-
-        waitingForGoodToGo =
+        decisionPauseActive =
             true;
 
 
@@ -165,13 +179,6 @@ public class InspectionGameController : MonoBehaviour
         {
             dangerButton.interactable =
                 false;
-        }
-
-
-        if (goodToGoButton != null)
-        {
-            goodToGoButton.interactable =
-                true;
         }
 
 
@@ -233,6 +240,8 @@ public class InspectionGameController : MonoBehaviour
         }
 
 
+        // The current scan has now been handled.
+
         if (scannerZone != null)
         {
             scannerZone.ClearCurrentCargo();
@@ -240,21 +249,48 @@ public class InspectionGameController : MonoBehaviour
 
 
         UpdateHUD();
+
+
+        // --------------------------------------------------
+        // AUTOMATIC RESUME
+        // --------------------------------------------------
+
+        if (!gameOver)
+        {
+            if (automaticResumeCoroutine != null)
+            {
+                StopCoroutine(
+                    automaticResumeCoroutine
+                );
+            }
+
+
+            automaticResumeCoroutine =
+                StartCoroutine(
+                    AutomaticResumeRoutine()
+                );
+        }
     }
 
 
     // ======================================================
-    // GOOD TO GO
+    // AUTOMATIC RESUME
     // ======================================================
 
-    public void PressGoodToGo()
+    IEnumerator AutomaticResumeRoutine()
     {
-        if (
-            gameOver ||
-            !waitingForGoodToGo
-        )
+        yield return new WaitForSeconds(
+            automaticResumeDelay
+        );
+
+
+        automaticResumeCoroutine =
+            null;
+
+
+        if (gameOver)
         {
-            return;
+            yield break;
         }
 
 
@@ -265,7 +301,7 @@ public class InspectionGameController : MonoBehaviour
             null;
 
 
-        waitingForGoodToGo =
+        decisionPauseActive =
             false;
 
 
@@ -273,13 +309,6 @@ public class InspectionGameController : MonoBehaviour
         {
             dangerButton.interactable =
                 true;
-        }
-
-
-        if (goodToGoButton != null)
-        {
-            goodToGoButton.interactable =
-                false;
         }
 
 
@@ -477,8 +506,19 @@ public class InspectionGameController : MonoBehaviour
         gameOver =
             true;
 
-        waitingForGoodToGo =
+        decisionPauseActive =
             false;
+
+
+        if (automaticResumeCoroutine != null)
+        {
+            StopCoroutine(
+                automaticResumeCoroutine
+            );
+
+            automaticResumeCoroutine =
+                null;
+        }
 
 
         PauseAllProducts();
@@ -492,13 +532,6 @@ public class InspectionGameController : MonoBehaviour
         if (dangerButton != null)
         {
             dangerButton.interactable =
-                false;
-        }
-
-
-        if (goodToGoButton != null)
-        {
-            goodToGoButton.interactable =
                 false;
         }
 
@@ -529,8 +562,19 @@ public class InspectionGameController : MonoBehaviour
         gameOver =
             true;
 
-        waitingForGoodToGo =
+        decisionPauseActive =
             false;
+
+
+        if (automaticResumeCoroutine != null)
+        {
+            StopCoroutine(
+                automaticResumeCoroutine
+            );
+
+            automaticResumeCoroutine =
+                null;
+        }
 
 
         PauseAllProducts();
@@ -544,13 +588,6 @@ public class InspectionGameController : MonoBehaviour
         if (dangerButton != null)
         {
             dangerButton.interactable =
-                false;
-        }
-
-
-        if (goodToGoButton != null)
-        {
-            goodToGoButton.interactable =
                 false;
         }
 

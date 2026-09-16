@@ -50,7 +50,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProductMover
   currentConveyor: {fileID: 0}
-  speed: 0.3
+  speed: 0.8
   flatSurfaceClearance: 0.08
   inclineSurfaceClearance: -0.12
   transitionDuration: 0.2
@@ -72,10 +72,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CargoContents
   items: 
   generateOnAwake: 1
-  minimumItems: 1
+  minimumItems: 3
   maximumItems: 5
-  prohibitedChance: 0.2
-  bombChance: 0.42
+  prohibitedChance: 0.431
+  bombChance: 0.335
 --- !u!65 &9089215097497694350
 BoxCollider:
   m_ObjectHideFlags: 0
