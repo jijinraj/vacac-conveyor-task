@@ -3,18 +3,25 @@ using UnityEngine.InputSystem;
 
 public class PlacementManager : MonoBehaviour
 {
+    [Header("Scene References")]
     public Camera mainCamera;
-
-    public GameObject genericConveyorPrefab;
-    public GameObject shortConveyorPrefab;
-
     public Collider groundCollider;
 
+    [Header("Conveyor Prefabs")]
+    public GameObject genericConveyorPrefab;
+    public GameObject shortConveyorPrefab;
+    public GameObject inclineConveyorPrefab;
+
+    [Header("Snapping")]
     public float snapDistance = 0.3f;
 
-    // Distance used to determine whether two conveyor
-    // endpoints are already connected.
+    // Distance used to determine whether two endpoints
+    // are already connected.
     public float connectionTolerance = 0.05f;
+
+    // If Path_Start and Path_End differ in height by more
+    // than this amount, treat the conveyor as inclined.
+    public float inclineHeightThreshold = 0.05f;
 
     private GameObject preview;
     private GameObject selectedConveyorPrefab;
@@ -23,6 +30,10 @@ public class PlacementManager : MonoBehaviour
     {
         if (Mouse.current == null || Keyboard.current == null)
             return;
+
+        // --------------------------------------------------
+        // Conveyor selection
+        // --------------------------------------------------
 
         // 1 = Generic Conveyor
         if (Keyboard.current.digit1Key.wasPressedThisFrame)
@@ -36,7 +47,13 @@ public class PlacementManager : MonoBehaviour
             BeginPlacement(shortConveyorPrefab);
         }
 
-        // Escape = cancel current placement
+        // 3 = Incline Conveyor
+        if (Keyboard.current.digit3Key.wasPressedThisFrame)
+        {
+            BeginPlacement(inclineConveyorPrefab);
+        }
+
+        // Escape = cancel placement
         if (Keyboard.current.escapeKey.wasPressedThisFrame)
         {
             CancelPlacement();
@@ -45,34 +62,37 @@ public class PlacementManager : MonoBehaviour
         if (preview == null)
             return;
 
+        // --------------------------------------------------
+        // Move preview using mouse raycast
+        // --------------------------------------------------
+
         Ray ray = mainCamera.ScreenPointToRay(
             Mouse.current.position.ReadValue()
         );
 
-        if (groundCollider.Raycast(ray, out RaycastHit hit, 1000f))
+        if (!groundCollider.Raycast(ray, out RaycastHit hit, 1000f))
+            return;
+
+        // Preview initially follows the Ground.
+        preview.transform.position = hit.point;
+
+        // Try to locate a valid endpoint.
+        bool isSnapped = TrySnapPreview();
+
+        bool hasExistingConveyor = HasExistingConveyor();
+
+        // First conveyor can be placed freely.
+        // Every conveyor after that must successfully snap.
+        bool canPlace =
+            !hasExistingConveyor ||
+            isSnapped;
+
+        if (
+            Mouse.current.leftButton.wasPressedThisFrame &&
+            canPlace
+        )
         {
-            // Move preview to the mouse position.
-            preview.transform.position = hit.point;
-
-            // Try to snap to an available endpoint.
-            bool isSnapped = TrySnapPreview();
-
-            // Determine whether a real conveyor already exists.
-            bool hasExistingConveyor = HasExistingConveyor();
-
-            // First conveyor may be placed freely.
-            // All later conveyors must be snapped.
-            bool canPlace =
-                !hasExistingConveyor ||
-                isSnapped;
-
-            if (
-                Mouse.current.leftButton.wasPressedThisFrame &&
-                canPlace
-            )
-            {
-                PlaceConveyor();
-            }
+            PlaceConveyor();
         }
     }
 
@@ -87,7 +107,6 @@ public class PlacementManager : MonoBehaviour
             return;
         }
 
-        // Remove previous preview if one already exists.
         if (preview != null)
         {
             Destroy(preview);
@@ -100,7 +119,7 @@ public class PlacementManager : MonoBehaviour
 
     void PlaceConveyor()
     {
-        if (selectedConveyorPrefab == null || preview == null)
+        if (preview == null || selectedConveyorPrefab == null)
             return;
 
         Instantiate(
@@ -128,7 +147,7 @@ public class PlacementManager : MonoBehaviour
 
         foreach (Conveyor conveyor in conveyors)
         {
-            // Ignore the active preview.
+            // Ignore placement preview.
             if (conveyor.gameObject == preview)
                 continue;
 
@@ -162,7 +181,7 @@ public class PlacementManager : MonoBehaviour
 
         foreach (Conveyor conveyor in conveyors)
         {
-            // Ignore the active preview.
+            // Ignore active preview.
             if (conveyor.gameObject == preview)
                 continue;
 
@@ -173,18 +192,16 @@ public class PlacementManager : MonoBehaviour
             //
             // [ Existing ][ Preview ]
             //
-            // Existing Snap_End
-            //        ->
-            // Preview Snap_Start
-            //
-            // Existing Snap_End must be free.
+            // Existing Snap_End -> Preview Snap_Start
             // ==================================================
 
             if (!IsEndOccupied(conveyor, conveyors))
             {
                 float startToEndDistance =
-                    Vector3.Distance(
+                    GetSnapDetectionDistance(
+                        previewConveyor,
                         previewConveyor.snapStart.position,
+                        conveyor,
                         conveyor.snapEnd.position
                     );
 
@@ -203,18 +220,16 @@ public class PlacementManager : MonoBehaviour
             //
             // [ Preview ][ Existing ]
             //
-            // Preview Snap_End
-            //        ->
-            // Existing Snap_Start
-            //
-            // Existing Snap_Start must be free.
+            // Preview Snap_End -> Existing Snap_Start
             // ==================================================
 
             if (!IsStartOccupied(conveyor, conveyors))
             {
                 float endToStartDistance =
-                    Vector3.Distance(
+                    GetSnapDetectionDistance(
+                        previewConveyor,
                         previewConveyor.snapEnd.position,
+                        conveyor,
                         conveyor.snapStart.position
                     );
 
@@ -227,11 +242,14 @@ public class PlacementManager : MonoBehaviour
             }
         }
 
-        // No valid free endpoint is nearby.
+        // No suitable free endpoint nearby.
         if (closestConveyor == null)
             return false;
 
-        // Keep the current conveyor line straight.
+        // Keep logical conveyor roots aligned.
+        //
+        // The actual incline is contained inside
+        // the Conveyor_Incline prefab.
         preview.transform.rotation =
             closestConveyor.transform.rotation;
 
@@ -252,10 +270,87 @@ public class PlacementManager : MonoBehaviour
                 previewConveyor.snapEnd.position;
         }
 
-        // Make the selected connection points overlap exactly.
+        // IMPORTANT:
+        // Actual snapping uses the complete XYZ offset.
+        //
+        // This means a Generic/Short conveyor can jump upward
+        // and attach to the elevated end of an Incline.
         preview.transform.position += offset;
 
         return true;
+    }
+
+    float GetSnapDetectionDistance(
+        Conveyor firstConveyor,
+        Vector3 firstPoint,
+        Conveyor secondConveyor,
+        Vector3 secondPoint
+    )
+    {
+        bool involvesIncline =
+            IsInclined(firstConveyor) ||
+            IsInclined(secondConveyor);
+
+        // Flat-to-flat conveyors keep the original full
+        // 3D snapping behaviour.
+        if (!involvesIncline)
+        {
+            return Vector3.Distance(
+                firstPoint,
+                secondPoint
+            );
+        }
+
+        // When an incline is involved, ignore Y only while
+        // searching for a nearby endpoint.
+        //
+        // The actual snap still aligns full XYZ afterwards.
+        return HorizontalDistance(
+            firstPoint,
+            secondPoint
+        );
+    }
+
+    bool IsInclined(Conveyor conveyor)
+    {
+        if (
+            conveyor == null ||
+            conveyor.pathStart == null ||
+            conveyor.pathEnd == null
+        )
+        {
+            return false;
+        }
+
+        float heightDifference = Mathf.Abs(
+            conveyor.pathEnd.position.y -
+            conveyor.pathStart.position.y
+        );
+
+        return heightDifference > inclineHeightThreshold;
+    }
+
+    float HorizontalDistance(
+        Vector3 firstPoint,
+        Vector3 secondPoint
+    )
+    {
+        Vector2 firstHorizontal =
+            new Vector2(
+                firstPoint.x,
+                firstPoint.z
+            );
+
+        Vector2 secondHorizontal =
+            new Vector2(
+                secondPoint.x,
+                secondPoint.z
+            );
+
+        return Vector2.Distance(
+            firstHorizontal,
+            secondHorizontal
+        );
     }
 
     bool IsEndOccupied(
@@ -268,14 +363,17 @@ public class PlacementManager : MonoBehaviour
             if (other == conveyor)
                 continue;
 
-            // Preview must not count as a real conveyor connection.
+            // Preview does not count as an existing connection.
             if (other.gameObject == preview)
                 continue;
 
-            float distance = Vector3.Distance(
-                conveyor.snapEnd.position,
-                other.snapStart.position
-            );
+            // IMPORTANT:
+            // Occupancy always uses full XYZ distance.
+            float distance =
+                Vector3.Distance(
+                    conveyor.snapEnd.position,
+                    other.snapStart.position
+                );
 
             if (distance <= connectionTolerance)
             {
@@ -296,14 +394,17 @@ public class PlacementManager : MonoBehaviour
             if (other == conveyor)
                 continue;
 
-            // Preview must not count as a real conveyor connection.
+            // Preview does not count as an existing connection.
             if (other.gameObject == preview)
                 continue;
 
-            float distance = Vector3.Distance(
-                conveyor.snapStart.position,
-                other.snapEnd.position
-            );
+            // IMPORTANT:
+            // Occupancy always uses full XYZ distance.
+            float distance =
+                Vector3.Distance(
+                    conveyor.snapStart.position,
+                    other.snapEnd.position
+                );
 
             if (distance <= connectionTolerance)
             {
