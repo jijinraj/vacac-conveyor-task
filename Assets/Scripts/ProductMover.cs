@@ -47,6 +47,11 @@ public class ProductMover : MonoBehaviour
     )]
     public float inclineTiltDegrees = 23f;
 
+    [Tooltip(
+        "How many degrees the product rotates each time RotateProduct() is called."
+    )]
+    public float productRotationStep = 90f;
+
 
     // ======================================================
     // CONNECTIONS
@@ -76,6 +81,14 @@ public class ProductMover : MonoBehaviour
 
     private Quaternion transitionStartRotation;
     private Quaternion transitionEndRotation;
+
+    // Additional rotation chosen by the player.
+    //
+    // 0   = normal
+    // 90  = sideways
+    // 180 = backwards
+    // 270 = opposite sideways
+    private float productYawOffset = 0f;
 
 
     // ======================================================
@@ -176,10 +189,44 @@ public class ProductMover : MonoBehaviour
             }
             else
             {
-                // Product has reached the end
-                // of the complete conveyor line.
                 Destroy(gameObject);
             }
+        }
+    }
+
+
+    // ======================================================
+    // PLAYER PRODUCT ROTATION
+    // ======================================================
+
+    public void RotateProduct90()
+    {
+        RotateProduct(productRotationStep);
+    }
+
+
+    public void RotateProduct(float degrees)
+    {
+        productYawOffset += degrees;
+
+        productYawOffset =
+            Mathf.Repeat(
+                productYawOffset,
+                360f
+            );
+
+
+        // If the product is currently travelling between
+        // conveyors, update the cached target orientation too.
+        if (
+            isTransitioning &&
+            transitionTargetConveyor != null
+        )
+        {
+            transitionEndRotation =
+                GetTargetConveyorRotation(
+                    transitionTargetConveyor
+                );
         }
     }
 
@@ -209,7 +256,6 @@ public class ProductMover : MonoBehaviour
         transitionElapsed = 0f;
 
 
-        // Start exactly where the product currently is.
         transitionStartPosition =
             transform.position;
 
@@ -219,16 +265,16 @@ public class ProductMover : MonoBehaviour
         // --------------------------------------------------
         //
         // Flat -> Flat:
-        //      use flat clearance
+        //      flat clearance
         //
         // Flat -> Incline:
-        //      use flat clearance at the bottom seam
+        //      flat clearance at bottom seam
         //
         // Incline -> Flat:
-        //      use flat clearance at the TOP seam
+        //      flat clearance at upper seam
         //
         // Incline -> Incline:
-        //      use incline clearance
+        //      incline clearance
 
         float seamClearance =
             GetTransitionSeamClearance(
@@ -274,24 +320,15 @@ public class ProductMover : MonoBehaviour
             ConveyorType.Incline;
 
 
-        // Only an Incline -> Incline seam uses
-        // the incline-specific clearance.
+        // Incline -> Incline
         if (fromIncline && toIncline)
         {
             return inclineSurfaceClearance;
         }
 
 
-        // Any seam involving Generic or Short
-        // uses the normal flat clearance.
-        //
-        // This is especially important for:
-        //
-        // Incline -> Generic
-        // Incline -> Short
-        //
-        // because the product needs to rise to the
-        // correct flat belt height before levelling out.
+        // Every seam involving Generic or Short uses
+        // the normal flat clearance.
         return flatSurfaceClearance;
     }
 
@@ -323,8 +360,6 @@ public class ProductMover : MonoBehaviour
             );
 
 
-        // SmoothStep:
-        // smoother start and end than a raw linear transition.
         float smoothT =
             t * t *
             (
@@ -338,6 +373,14 @@ public class ProductMover : MonoBehaviour
                 transitionStartPosition,
                 transitionEndPosition,
                 smoothT
+            );
+
+
+        // Recalculate this so product rotation changes
+        // remain valid even during a transition.
+        transitionEndRotation =
+            GetTargetConveyorRotation(
+                transitionTargetConveyor
             );
 
 
@@ -437,6 +480,11 @@ public class ProductMover : MonoBehaviour
         }
 
 
+        float finalYaw =
+            conveyor.transform.eulerAngles.y +
+            productYawOffset;
+
+
         // --------------------------------------------------
         // GENERIC / SHORT
         // --------------------------------------------------
@@ -448,7 +496,7 @@ public class ProductMover : MonoBehaviour
         {
             return Quaternion.Euler(
                 0f,
-                conveyor.transform.eulerAngles.y,
+                finalYaw,
                 0f
             );
         }
@@ -472,9 +520,6 @@ public class ProductMover : MonoBehaviour
             conveyor.pathStart.position;
 
 
-        // Path direction is used only to decide
-        // whether the product is travelling uphill
-        // or downhill.
         bool travellingUp =
             direction.y >= 0f;
 
@@ -487,7 +532,7 @@ public class ProductMover : MonoBehaviour
 
         return Quaternion.Euler(
             pitch,
-            conveyor.transform.eulerAngles.y,
+            finalYaw,
             0f
         );
     }

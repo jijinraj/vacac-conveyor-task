@@ -3,28 +3,90 @@ using UnityEngine.InputSystem;
 
 public class ProductSpawner : MonoBehaviour
 {
+    // ======================================================
+    // PRODUCT PREFAB
+    // ======================================================
+
+    [Header("Product")]
+
     public GameObject productPrefab;
+
+
+    // ======================================================
+    // SPAWNING
+    // ======================================================
+
+    [Header("Spawning")]
 
     public float connectionTolerance = 0.05f;
 
-    // Extra visible space required between products.
+    [Tooltip("Extra visible space required between products.")]
     public float productGap = 0.05f;
+
+
+    // ======================================================
+    // INTERNAL STATE
+    // ======================================================
+
+    // The most recently SUCCESSFULLY spawned product.
+    //
+    // Pressing R rotates only this product.
+    private ProductMover latestSpawnedProduct;
+
+
+    // ======================================================
+    // UNITY LIFECYCLE
+    // ======================================================
 
     void Update()
     {
         if (Keyboard.current == null)
             return;
 
-        // Press 2 to spawn a cardboard box.
-        if (Keyboard.current.digit4Key.wasPressedThisFrame)
+
+        // --------------------------------------------------
+        // SPAWN PRODUCT
+        // --------------------------------------------------
+        //
+        // 4 = Spawn cardboard box
+
+        if (
+            Keyboard.current.digit4Key.wasPressedThisFrame
+        )
         {
             SpawnProduct();
         }
+
+
+        // --------------------------------------------------
+        // ROTATE LATEST PRODUCT
+        // --------------------------------------------------
+        //
+        // R = Rotate most recently spawned product by 90°
+        //
+        // ProductMover stores the yaw offset, so the product
+        // keeps this orientation while travelling across
+        // Generic, Short and Incline conveyors.
+
+        if (
+            Keyboard.current.rKey.wasPressedThisFrame &&
+            latestSpawnedProduct != null
+        )
+        {
+            latestSpawnedProduct.RotateProduct90();
+        }
     }
+
+
+    // ======================================================
+    // PRODUCT SPAWNING
+    // ======================================================
 
     void SpawnProduct()
     {
-        Conveyor firstConveyor = FindFirstConveyor();
+        Conveyor firstConveyor =
+            FindFirstConveyor();
+
 
         if (firstConveyor == null)
         {
@@ -35,11 +97,18 @@ public class ProductSpawner : MonoBehaviour
             return;
         }
 
-        // Create candidate product.
-        GameObject product = Instantiate(productPrefab);
+
+        // --------------------------------------------------
+        // CREATE CANDIDATE PRODUCT
+        // --------------------------------------------------
+
+        GameObject product =
+            Instantiate(productPrefab);
+
 
         ProductMover mover =
             product.GetComponent<ProductMover>();
+
 
         if (mover == null)
         {
@@ -48,13 +117,24 @@ public class ProductSpawner : MonoBehaviour
             );
 
             Destroy(product);
+
             return;
         }
 
-        // Position candidate at the real spawn point.
+
+        // --------------------------------------------------
+        // INITIALIZE PRODUCT
+        // --------------------------------------------------
+
+        // Position the candidate at the actual start
+        // of the conveyor line.
         mover.Initialize(firstConveyor);
 
-        // Check its actual visual bounds against existing products.
+
+        // --------------------------------------------------
+        // OVERLAP CHECK
+        // --------------------------------------------------
+
         if (OverlapsExistingProduct(product))
         {
             Debug.LogWarning(
@@ -62,28 +142,68 @@ public class ProductSpawner : MonoBehaviour
             );
 
             Destroy(product);
+
             return;
         }
+
+
+        // --------------------------------------------------
+        // SUCCESSFUL SPAWN
+        // --------------------------------------------------
+        //
+        // Only remember the product AFTER the overlap check.
+        //
+        // This prevents R from trying to rotate a candidate
+        // that was rejected and destroyed.
+
+        latestSpawnedProduct =
+            mover;
     }
 
-    bool OverlapsExistingProduct(GameObject newProduct)
+
+    // ======================================================
+    // PRODUCT OVERLAP
+    // ======================================================
+
+    bool OverlapsExistingProduct(
+        GameObject newProduct
+    )
     {
-        if (!TryGetProductBounds(newProduct, out Bounds newBounds))
+        if (
+            !TryGetProductBounds(
+                newProduct,
+                out Bounds newBounds
+            )
+        )
         {
             return false;
         }
 
+
         // Add a small safety gap around the product.
-        newBounds.Expand(productGap * 2f);
+        newBounds.Expand(
+            productGap * 2f
+        );
+
 
         ProductMover[] products =
             FindObjectsByType<ProductMover>();
 
-        foreach (ProductMover product in products)
+
+        foreach (
+            ProductMover product
+            in products
+        )
         {
             // Ignore the candidate product itself.
-            if (product.gameObject == newProduct)
+            if (
+                product.gameObject ==
+                newProduct
+            )
+            {
                 continue;
+            }
+
 
             if (
                 TryGetProductBounds(
@@ -92,15 +212,25 @@ public class ProductSpawner : MonoBehaviour
                 )
             )
             {
-                if (newBounds.Intersects(existingBounds))
+                if (
+                    newBounds.Intersects(
+                        existingBounds
+                    )
+                )
                 {
                     return true;
                 }
             }
         }
 
+
         return false;
     }
+
+
+    // ======================================================
+    // PRODUCT VISUAL BOUNDS
+    // ======================================================
 
     bool TryGetProductBounds(
         GameObject productObject,
@@ -108,55 +238,98 @@ public class ProductSpawner : MonoBehaviour
     )
     {
         Renderer[] renderers =
-            productObject.GetComponentsInChildren<Renderer>();
+            productObject
+                .GetComponentsInChildren<Renderer>();
+
 
         if (renderers.Length == 0)
         {
-            bounds = new Bounds();
+            bounds =
+                new Bounds();
+
             return false;
         }
 
-        bounds = renderers[0].bounds;
 
-        for (int i = 1; i < renderers.Length; i++)
+        bounds =
+            renderers[0].bounds;
+
+
+        for (
+            int i = 1;
+            i < renderers.Length;
+            i++
+        )
         {
-            bounds.Encapsulate(renderers[i].bounds);
+            bounds.Encapsulate(
+                renderers[i].bounds
+            );
         }
+
 
         return true;
     }
+
+
+    // ======================================================
+    // FIND START OF CONVEYOR LINE
+    // ======================================================
 
     Conveyor FindFirstConveyor()
     {
         Conveyor[] conveyors =
             FindObjectsByType<Conveyor>();
 
-        foreach (Conveyor candidate in conveyors)
+
+        foreach (
+            Conveyor candidate
+            in conveyors
+        )
         {
-            bool hasPreviousConveyor = false;
+            bool hasPreviousConveyor =
+                false;
 
-            foreach (Conveyor other in conveyors)
+
+            foreach (
+                Conveyor other
+                in conveyors
+            )
             {
-                if (candidate == other)
-                    continue;
-
-                float distance = Vector3.Distance(
-                    other.snapEnd.position,
-                    candidate.snapStart.position
-                );
-
-                if (distance <= connectionTolerance)
+                if (
+                    candidate ==
+                    other
+                )
                 {
-                    hasPreviousConveyor = true;
+                    continue;
+                }
+
+
+                float distance =
+                    Vector3.Distance(
+                        other.snapEnd.position,
+                        candidate.snapStart.position
+                    );
+
+
+                if (
+                    distance <=
+                    connectionTolerance
+                )
+                {
+                    hasPreviousConveyor =
+                        true;
+
                     break;
                 }
             }
+
 
             if (!hasPreviousConveyor)
             {
                 return candidate;
             }
         }
+
 
         return null;
     }
