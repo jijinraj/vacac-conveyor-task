@@ -1793,7 +1793,7 @@ MonoBehaviour:
   gunSprite: {fileID: 21300000, guid: b8202871a0584514b81868f0a55b42aa, type: 3}
   bombSprite: {fileID: 21300000, guid: 182448df810ca3446994f7171bf66343, type: 3}
   displayDuration: 2.5
-  showTestCargoOnStart: 1
+  showTestCargoOnStart: 0
 --- !u!4 &315849797
 Transform:
   m_ObjectHideFlags: 0
