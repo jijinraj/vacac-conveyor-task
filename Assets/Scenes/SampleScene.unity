@@ -526,6 +526,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProductSpawner
   productPrefab: {fileID: 4729590330243960277, guid: b3ef371124133834a83090d3e07e2866, type: 3}
+  canPrefab: {fileID: 5248776598740220169, guid: 728a1e9dbeec1f14981859c22d9d5739, type: 3}
   connectionTolerance: 0.05
   productGap: 0.05
 --- !u!4 &807220539
@@ -622,11 +623,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlacementManager
   mainCamera: {fileID: 330585545}
+  groundCollider: {fileID: 594526868}
   genericConveyorPrefab: {fileID: 3744988763874445308, guid: de191ac889dd7dd4d8b62e826753dbba, type: 3}
   shortConveyorPrefab: {fileID: 3744988763874445308, guid: 2d8bf0854e6db6b41951697a8653516b, type: 3}
-  groundCollider: {fileID: 594526868}
+  inclineConveyorPrefab: {fileID: 3744988763874445308, guid: e8715bab3c2485142b4e43900a428874, type: 3}
   snapDistance: 0.3
   connectionTolerance: 0.05
+  inclineHeightThreshold: 0.05
+  elevatedHeightThreshold: 0.05
+  genericAfterGenericStartZ: -1.68
+  genericAfterShortStartZ: -1.22
+  genericAfterInclineStartZ: -1.5
+  shortAfterGenericStartZ: -1.38
+  shortAfterShortStartZ: -0.91
+  shortAfterInclineStartZ: -1.22
+  inclineAfterGenericStartZ: -0.05
+  inclineAfterShortStartZ: 0.2955
+  inclineAfterInclineStartZ: -0.03
 --- !u!4 &1433143179
 Transform:
   m_ObjectHideFlags: 0
