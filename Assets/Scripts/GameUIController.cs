@@ -1,14 +1,28 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 public class GameUIController : MonoBehaviour
 {
+    // ======================================================
+    // UI REFERENCES
+    // ======================================================
+
     [Header("UI References")]
     public GameObject toolbarPanel;
     public GameObject pausePanel;
 
+
+    // ======================================================
+    // RUNTIME
+    // ======================================================
+
     private bool isPaused = false;
 
+
+    // ======================================================
+    // UNITY
+    // ======================================================
 
     void Start()
     {
@@ -34,40 +48,96 @@ public class GameUIController : MonoBehaviour
 
     public void TogglePause()
     {
-        SetPaused(!isPaused);
+        SetPaused(
+            !isPaused
+        );
     }
 
 
     public void PauseGame()
     {
-        SetPaused(true);
+        SetPaused(
+            true
+        );
     }
 
 
     public void ResumeGame()
     {
-        SetPaused(false);
+        SetPaused(
+            false
+        );
     }
 
 
-    void SetPaused(bool paused)
+    void SetPaused(
+        bool paused
+    )
     {
-        isPaused = paused;
+        isPaused =
+            paused;
+
 
         Time.timeScale =
-            paused ? 0f : 1f;
+            paused
+                ? 0f
+                : 1f;
 
 
         if (pausePanel != null)
         {
-            pausePanel.SetActive(paused);
+            pausePanel.SetActive(
+                paused
+            );
         }
 
+
+        // In SandboxScene this can still show/hide the toolbar.
+        // In GameScene the ToolbarPanel itself should already
+        // be disabled because the actual game does not need it.
 
         if (toolbarPanel != null)
         {
-            toolbarPanel.SetActive(!paused);
+            toolbarPanel.SetActive(
+                !paused
+            );
         }
+    }
+
+
+    // ======================================================
+    // RESTART SHIFT
+    // ======================================================
+
+    public void RestartGame()
+    {
+        Time.timeScale =
+            1f;
+
+
+        Scene currentScene =
+            SceneManager.GetActiveScene();
+
+
+        SceneManager.LoadScene(
+            currentScene.name
+        );
+    }
+
+
+    // ======================================================
+    // MAIN MENU
+    // ======================================================
+
+    public void ReturnToMainMenu()
+    {
+        Time.timeScale =
+            1f;
+
+
+        SceneManager.LoadScene(
+            "MainMenu"
+        );
     }
 
 
@@ -77,10 +147,13 @@ public class GameUIController : MonoBehaviour
 
     public void QuitGame()
     {
-        Time.timeScale = 1f;
+        Time.timeScale =
+            1f;
+
 
 #if UNITY_EDITOR
-        UnityEditor.EditorApplication.isPlaying = false;
+        UnityEditor.EditorApplication.isPlaying =
+            false;
 #else
         Application.Quit();
 #endif
