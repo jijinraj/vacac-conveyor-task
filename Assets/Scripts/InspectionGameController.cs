@@ -52,6 +52,31 @@ public class InspectionGameController : MonoBehaviour
 
 
     // ======================================================
+    // SCORE MILESTONES
+    // ======================================================
+
+    [Header("Score Milestones")]
+
+    public GameObject milestonePanel;
+    public TMP_Text milestoneText;
+
+    [Tooltip(
+        "Audio source used only for milestone / victory sounds."
+    )]
+    public AudioSource milestoneAudioSource;
+
+    [Tooltip(
+        "Short victory jingle played when a milestone is reached."
+    )]
+    public AudioClip milestoneVictoryClip;
+
+    [Tooltip(
+        "How long the milestone message stays visible."
+    )]
+    public float milestoneDisplayDuration = 1.5f;
+
+
+    // ======================================================
     // RUNTIME
     // ======================================================
 
@@ -67,6 +92,35 @@ public class InspectionGameController : MonoBehaviour
         new List<ProductMover>();
 
     private Coroutine automaticResumeCoroutine;
+    private Coroutine milestoneCoroutine;
+
+
+    // ======================================================
+    // MILESTONE DATA
+    // ======================================================
+
+    private readonly int[] scoreMilestones =
+    {
+        100,
+        500,
+        1000,
+        2000,
+        3000
+    };
+
+
+    private readonly string[] milestoneMessages =
+    {
+        "FIRST CATCH!",
+        "SHARP EYES!",
+        "SECURITY PRO!",
+        "ELITE INSPECTOR!",
+        "MASTER INSPECTOR!"
+    };
+
+
+    private readonly HashSet<int> reachedMilestones =
+        new HashSet<int>();
 
 
     // ======================================================
@@ -121,6 +175,12 @@ public class InspectionGameController : MonoBehaviour
         }
 
 
+        if (milestonePanel != null)
+        {
+            milestonePanel.SetActive(false);
+        }
+
+
         UpdateHUD();
 
 
@@ -144,9 +204,6 @@ public class InspectionGameController : MonoBehaviour
             return;
         }
 
-
-        // There must be cargo currently inside
-        // the scanner decision window.
 
         if (
             scannerZone == null ||
@@ -194,6 +251,9 @@ public class InspectionGameController : MonoBehaviour
                 bombPoints;
 
 
+            CheckScoreMilestones();
+
+
             SetResult(
                 $"EXPLOSIVE DEVICE CONFIRMED\n+{bombPoints} POINTS"
             );
@@ -215,6 +275,9 @@ public class InspectionGameController : MonoBehaviour
         {
             score +=
                 prohibitedItemPoints;
+
+
+            CheckScoreMilestones();
 
 
             SetResult(
@@ -239,8 +302,6 @@ public class InspectionGameController : MonoBehaviour
             );
         }
 
-
-        // The current scan has now been handled.
 
         if (scannerZone != null)
         {
@@ -315,6 +376,116 @@ public class InspectionGameController : MonoBehaviour
         SetResult(
             "SCANNING..."
         );
+    }
+
+
+    // ======================================================
+    // SCORE MILESTONES
+    // ======================================================
+
+    void CheckScoreMilestones()
+    {
+        for (
+            int i = 0;
+            i < scoreMilestones.Length;
+            i++
+        )
+        {
+            int milestone =
+                scoreMilestones[i];
+
+
+            if (
+                score >= milestone &&
+                !reachedMilestones.Contains(milestone)
+            )
+            {
+                reachedMilestones.Add(
+                    milestone
+                );
+
+
+                ShowMilestone(
+                    milestone,
+                    milestoneMessages[i]
+                );
+
+
+                break;
+            }
+        }
+    }
+
+
+    void ShowMilestone(
+        int milestone,
+        string message
+    )
+    {
+        if (milestoneCoroutine != null)
+        {
+            StopCoroutine(
+                milestoneCoroutine
+            );
+        }
+
+
+        milestoneCoroutine =
+            StartCoroutine(
+                ShowMilestoneRoutine(
+                    milestone,
+                    message
+                )
+            );
+    }
+
+
+    IEnumerator ShowMilestoneRoutine(
+        int milestone,
+        string message
+    )
+    {
+        if (milestonePanel != null)
+        {
+            milestonePanel.SetActive(
+                true
+            );
+        }
+
+
+        if (milestoneText != null)
+        {
+            milestoneText.text =
+                $"{milestone} POINTS!\n{message}";
+        }
+
+
+        if (
+            milestoneAudioSource != null &&
+            milestoneVictoryClip != null
+        )
+        {
+            milestoneAudioSource.PlayOneShot(
+                milestoneVictoryClip
+            );
+        }
+
+
+        yield return new WaitForSeconds(
+            milestoneDisplayDuration
+        );
+
+
+        if (milestonePanel != null)
+        {
+            milestonePanel.SetActive(
+                false
+            );
+        }
+
+
+        milestoneCoroutine =
+            null;
     }
 
 
@@ -539,13 +710,6 @@ public class InspectionGameController : MonoBehaviour
         Debug.LogWarning(
             "GAME OVER: Bomb reached the end of the conveyor."
         );
-
-
-        // Later:
-        // explosion VFX
-        // explosion SFX
-        // screen shake
-        // dedicated Game Over panel
     }
 
 
@@ -595,13 +759,6 @@ public class InspectionGameController : MonoBehaviour
         Debug.LogWarning(
             "GAME OVER: Maximum security warnings reached."
         );
-
-
-        // Later:
-        // termination letter
-        // final score
-        // restart button
-        // main menu button
     }
 
 
